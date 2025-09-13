@@ -39,6 +39,8 @@
 
 #include "Loader.hpp"
 #include "Tokenizer.hpp"
+#include "TokenizerFile.hpp"
+#include <vector>
 
 #include "wrl/Node.hpp"
 
@@ -54,6 +56,10 @@ public:
   ~LoaderStl() {};
 
   bool  load(const char* filename, SceneGraph& wrl);
+  bool  parseFace(TokenizerFile& tkn, 
+                   vector<float>& normal,
+                   vector<float>& coord,
+                   vector<int>& coordIndex);
   const char* ext() const { return _ext; }
 
 };

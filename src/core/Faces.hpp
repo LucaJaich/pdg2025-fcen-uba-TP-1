@@ -88,9 +88,8 @@ public:
   int     getNextCorner(const int iC)              const;
 
 private:
-
-  // TODO
-
+  int _nV;
+  vector<int> coordIndex;
 };
 
 #endif /* _FACES_HPP_ */

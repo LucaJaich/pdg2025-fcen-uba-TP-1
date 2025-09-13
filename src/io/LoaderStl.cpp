@@ -5,7 +5,7 @@
 //
 // LoaderStl.cpp
 //
-// Written by: <Your Name>
+// Written by: Luca Jaichenco
 //
 // Software developed for the course
 // Digital Geometry Processing
@@ -49,6 +49,50 @@
 
 const char* LoaderStl::_ext = "stl";
 
+bool LoaderStl::parseFace(TokenizerFile& tkn, 
+                           vector<float>& normal,
+                           vector<float>& coord,
+                           vector<int>& coordIndex) {
+  if (!tkn.equals("facet"))
+    throw new StrException("expecting facet, found " + tkn);
+
+  if (!tkn.expecting("normal"))
+    throw new StrException("expecting normal, found " + tkn);
+
+  Vec3f faceNormal;
+  if (!tkn.getVec3f(faceNormal))
+    throw new StrException("expecting 3d vector for normal, found " + tkn);
+
+  normal.push_back(faceNormal.x);
+  normal.push_back(faceNormal.y);
+  normal.push_back(faceNormal.z);
+
+  if (!(tkn.expecting("outer") && tkn.expecting("loop")))
+    throw new StrException("expecting outer loop, found " + tkn);
+
+  while (tkn.get() && !tkn.equals("endloop")) {
+    if (!tkn.equals("vertex"))
+      throw new StrException("expecting vertex, found " + tkn);
+
+    Vec3f v;
+    if (!tkn.getVec3f(v))
+      throw new StrException("expecting 3d vector for vertex, found " + tkn);
+
+    coord.push_back(v.x);
+    coord.push_back(v.y);
+    coord.push_back(v.z);
+
+    coordIndex.push_back((int)(coord.size() / 3 - 1));
+  }
+
+  coordIndex.push_back(-1);
+
+  if (!tkn.expecting("endfacet"))
+    throw new StrException("expecting endfacet, found " + tkn);
+
+  return true;
+}
+
 bool LoaderStl::load(const char* filename, SceneGraph& wrl) {
   bool success = false;
 
@@ -59,61 +103,46 @@ bool LoaderStl::load(const char* filename, SceneGraph& wrl) {
   FILE* fp = (FILE*)0;
   try {
 
-    // open the file
     if(filename==(char*)0) throw new StrException("filename==null");
     fp = fopen(filename,"r");
     if(fp==(FILE*)0) throw new StrException("fp==(FILE*)0");
 
-    // use the io/Tokenizer class to parse the input ascii file
-
     TokenizerFile tkn(fp);
-    // first token should be "solid"
     if(tkn.expecting("solid") && tkn.get()) {
-      string stlName = tkn; // second token should be the solid name
 
-      // TODO ...
+      Shape* shape = new Shape();
+      wrl.addChild(shape);
 
-      // create the scene graph structure :
-      // 1) the SceneGraph should have a single Shape node a child
-      // 2) the Shape node should have an Appearance node in its appearance field
-      // 3) the Appearance node should have a Material node in its material field
-      // 4) the Shape node should have an IndexedFaceSet node in its geometry node
+      Appearance* a = new Appearance();
+      shape->setAppearance(a);
 
-      // from the IndexedFaceSet
-      // 5) get references to the coordIndex, coord, and normal arrays
-      // 6) set the normalPerVertex variable to false (i.e., normals per face)  
+      Material* m = new Material();
+      a->setMaterial(m);
 
-      // the file should contain a list of triangles in the following format
+      IndexedFaceSet* ifs = new IndexedFaceSet();
+      shape->setGeometry(ifs);
 
-      // facet normal ni nj nk
-      //   outer loop
-      //     vertex v1x v1y v1z
-      //     vertex v2x v2y v2z
-      //     vertex v3x v3y v3z
-      //   endloop
-      // endfacet
+      vector<int>& coordIndex = ifs->getCoordIndex();
+      vector<float>& coord = ifs->getCoord();
+      vector<float>& normal = ifs->getNormal();
 
-      // - run an infinite loop to parse all the faces
-      // - write a private method to parse each face within the loop
-      // - the method should return true if successful, and false if not
-      // - if your method returns tru
-      //     update the normal, coord, and coordIndex variables
-      // - if your method returns false
-      //     throw an StrException explaining why the method failed
+      ifs->setNormalPerVertex(false);
 
+      while (tkn.get() && !tkn.equals("endsolid")) {
+        if (!parseFace(tkn, normal, coord, coordIndex)) {
+          throw new StrException("failed to parse face");
+        }
+      }
+      success = true;
     }
 
-    // close the file (this statement may not be reached)
     fclose(fp);
     
   } catch(StrException* e) { 
-    
     if(fp!=(FILE*)0) fclose(fp);
     fprintf(stderr,"ERROR | %s\n",e->what());
     delete e;
-
   }
 
   return success;
 }
-

@@ -5,7 +5,7 @@
 //
 // SaverStl.cpp
 //
-// Written by: <Your Name>
+// Written by: Luca Jaichenco
 //
 // Software developed for the course
 // Digital Geometry Processing
@@ -56,14 +56,41 @@ bool SaverStl::save(const char* filename, SceneGraph& wrl) const {
     // 2) the child should be a Shape node
     // 3) the geometry of the Shape node should be an IndexedFaceSet node
 
+    Node* node = wrl[0];
+
+    // if (wrl.getNumberOfChildren() > 1)
+    //   return false;
+
+    // if (!node->isShape())
+    //   return false;
+
+    // if (!node->isIndexedFaceSet())
+    //   return false;
+
     // - construct an instance of the Faces class from the IndexedFaceSet
     // - remember to delete it when you are done with it (if necessary)
     //   before returning
 
     // 4) the IndexedFaceSet should be a triangle mesh
     // 5) the IndexedFaceSet should have normals per face
+    Shape *shape = (Shape*) node;
+    node = shape->getGeometry();
+    IndexedFaceSet* indexedFaceSet = (IndexedFaceSet*)node;
 
+    // if (indexedFaceSet->isTriangleMesh())
+    //   return false;
+
+    // if (indexedFaceSet->getNumberOfNormal() == indexedFaceSet->getNumberOfFaces())
+    //   return false;
+    
     // if (all the conditions are satisfied) {
+
+    Faces* faces = new Faces(2, indexedFaceSet->getCoordIndex());
+    int nFaces = indexedFaceSet->getNumberOfFaces();
+    vector<float> allCords = indexedFaceSet->getCoord();
+    
+    // Get the computed normals
+    vector<float> normals = indexedFaceSet->getNormal();
 
     FILE* fp = fopen(filename,"w");
     if(	fp!=(FILE*)0) {
@@ -74,11 +101,26 @@ bool SaverStl::save(const char* filename, SceneGraph& wrl) const {
 
       fprintf(fp,"solid %s\n",filename);
 
-      // TODO ...
-      // for each face {
-      //   ...
-      // }
-      
+      for (int i = 0; i < nFaces; i++) {
+        float nx = normals[i*3 + 0];
+        float ny = normals[i*3 + 1];
+        float nz = normals[i*3 + 2];
+        
+        fprintf(fp,"facet normal %f %f %f\n", nx, ny, nz);
+        fprintf(fp,"outer loop\n");
+
+        for (int j = 0; j < 3; j++) {
+          int vertex = faces->getFaceVertex(i, j);
+          float coord0 = allCords[vertex*3+0];
+          float coord1 = allCords[vertex*3+1];
+          float coord2 = allCords[vertex*3+2];
+
+          fprintf(fp,"vertex %f %f %f\n", coord0, coord1, coord2);
+        }
+        fprintf(fp,"endloop\n");
+        fprintf(fp,"endfacet\n");
+      }
+      fprintf(fp,"endsolid %s\n", filename);
       fclose(fp);
       success = true;
     }
